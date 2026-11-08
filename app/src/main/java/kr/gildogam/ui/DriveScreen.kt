@@ -107,7 +107,8 @@ fun DriveScreen(
             modifier = Modifier.padding(start = 96.dp, top = 40.dp),
         )
 
-        StatusChip(ui, Modifier.align(Alignment.TopEnd).padding(top = 48.dp, end = 48.dp))
+        // The card alert takes the chip's place while it is up.
+        if (ui.justAcquired == null) StatusChip(ui, Modifier.align(Alignment.TopEnd).padding(top = 48.dp, end = 48.dp))
 
         // Bottom: the last spoken line as a caption, and the few buttons the app has.
         Row(
@@ -150,7 +151,7 @@ fun DriveScreen(
             visible = ui.justAcquired != null,
             enter = slideInHorizontally { it / 2 } + fadeIn(),
             exit = slideOutHorizontally { it / 2 } + fadeOut(),
-            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 96.dp, bottom = 40.dp),
+            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 96.dp, bottom = if (consoleOpen) 190.dp else 80.dp),
         ) {
             lastCard?.let { RoadCardAlert(it) }
         }
@@ -358,18 +359,18 @@ private fun Acquisition.oneLiner(): String {
 private fun RoadCardAlert(a: Acquisition) {
     Column(
         Modifier
-            .width(400.dp)
+            .width(340.dp)
             .shadow(12.dp, RoundedCornerShape(40.dp))
             .background(Color(0xFFCBD2DC), RoundedCornerShape(40.dp))
-            .padding(horizontal = 30.dp, vertical = 32.dp),
+            .padding(horizontal = 26.dp, vertical = 26.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        CardIllustration(a.kind, a.face, Modifier.fillMaxWidth(0.86f).aspectRatio(1.1f))
-        Spacer(Modifier.height(20.dp))
+        CardIllustration(a.kind, a.face, Modifier.fillMaxWidth(0.86f).aspectRatio(1.2f))
+        Spacer(Modifier.height(16.dp))
         Text(
             a.cardName,
             color = Color.White,
-            fontSize = 34.sp,
+            fontSize = 30.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
             maxLines = 1,
@@ -378,9 +379,10 @@ private fun RoadCardAlert(a: Acquisition) {
                 .background(a.face.band())
                 .padding(vertical = 10.dp),
         )
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(12.dp))
         Text(a.oneLiner(), color = Color(0xFF1F2430), fontSize = 19.sp, textAlign = TextAlign.Center)
-        val marks = listOf("${a.face.label} 에디션") + a.badges.map(Badge::label)
+        val editions = Edition.entries.filter { it in a.editions }.joinToString("·") { it.label }
+        val marks = listOf("$editions 에디션") + a.badges.map(Badge::label)
         Text(marks.joinToString(" · "), color = Color(0xFF5B6475), fontSize = 16.sp, modifier = Modifier.padding(top = 4.dp))
     }
 }
