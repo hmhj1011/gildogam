@@ -44,16 +44,14 @@ adb shell am start -n "$PKG/.MainActivity"
 sleep 12
 shot 01-start
 
-tap "시연 콘솔"
+tap "시연"
 sleep 2
 shot 02-console
 
 # Trip 1: a clear day at noon. Record it (screenrecord stops by itself at 170 s).
-tap "낮 12시"
-sleep 1
 adb shell screenrecord --time-limit 170 --bit-rate 2000000 /sdcard/trip1.mp4 &
 REC_PID=$!
-tap "서울 → 강릉 경포해변"
+tap "맑은 낮"
 for i in $(seq -w 1 14); do
   sleep 11
   shot "03-trip1-$i"
@@ -64,22 +62,16 @@ sleep 8
 shot 04-arrived
 
 # Trip 2: the same road on a rainy night.
-tap "밤 10시"
-sleep 1
-tap "와이퍼 켬"
-sleep 1
-tap "서울 → 강릉 경포해변"
+tap "비 오는 밤"
 for i in $(seq -w 1 14); do
   sleep 11
   shot "05-trip2-$i"
 done
 sleep 10
-tap "와이퍼 끔"
-sleep 1
 shot 06-arrived
 
 # The journey book (opens only while parked).
-tap "시연 콘솔 닫기"
+tap "시연 닫기"
 sleep 2
 tap "여정 도감"
 sleep 3

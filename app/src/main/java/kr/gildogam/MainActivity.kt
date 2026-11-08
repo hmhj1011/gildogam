@@ -95,6 +95,7 @@ class MainActivity : ComponentActivity() {
                         if (consoleOpen && !dexVisible && ui.asking == null) {
                             DemoConsole(
                                 ui = ui,
+                                onScenario = controller::playScenario,
                                 onEvent = controller::dispatch,
                                 onPlay = controller::play,
                                 onStop = controller::stopDemo,

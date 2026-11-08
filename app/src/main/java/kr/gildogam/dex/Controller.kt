@@ -16,6 +16,7 @@ import kr.gildogam.core.Acquisition
 import kr.gildogam.core.CarEvent
 import kr.gildogam.core.DemoPlayer
 import kr.gildogam.core.DemoTrip
+import kr.gildogam.core.DemoTrips
 import kr.gildogam.core.Dex
 import kr.gildogam.core.Effect
 import kr.gildogam.core.EngineConfig
@@ -49,6 +50,14 @@ sealed interface Ask {
 }
 
 /** Demo clock: shift the time of day so night and dawn editions can be shown at any hour. */
+/** One-tap demo situations. */
+enum class Scenario(val label: String, val hint: String) {
+    CLEAR_DAY("맑은 낮", "강릉 · 기본 에디션"),
+    RAINY_NIGHT("비 오는 밤", "강릉 · 빗길·야경"),
+    SNOW("눈 오는 날", "인천대교 · 눈길"),
+    COMMUTE("출근길 3번", "내 길 카드 탄생"),
+}
+
 enum class DemoClock(val label: String, val hour: Int?) {
     NOW("지금", null),
     NOON("낮 12시", 12),
@@ -309,20 +318,45 @@ class Controller(context: Context) {
         publish()
     }
 
+    /** One tap sets the time, the weather and the route, then drives. */
+    fun playScenario(s: Scenario) {
+        val clockFor = when (s) {
+            Scenario.CLEAR_DAY, Scenario.SNOW -> DemoClock.NOON
+            Scenario.RAINY_NIGHT -> DemoClock.NIGHT
+            Scenario.COMMUTE -> DemoClock.NOW
+        }
+        setClock(clockFor)
+        dispatch(CarEvent.Wiper(s == Scenario.RAINY_NIGHT || s == Scenario.SNOW))
+        dispatch(CarEvent.OutsideTemp(if (s == Scenario.SNOW) -2f else 12f))
+        val trips = when (s) {
+            Scenario.CLEAR_DAY, Scenario.RAINY_NIGHT -> listOf(DemoTrips.gangneung)
+            Scenario.SNOW -> listOf(DemoTrips.airport)
+            Scenario.COMMUTE -> List(3) { DemoTrips.commute }
+        }
+        playAll(trips, s.label)
+    }
+
     /** Plays a scripted drive: the same events the car adapters send, on a timer. */
-    fun play(trip: DemoTrip) {
+    fun play(trip: DemoTrip) = playAll(listOf(trip), trip.title)
+
+    private fun playAll(trips: List<DemoTrip>, label: String) {
         stopDemo()
         if (!demoMode) setDemoMode(true)
-        _ui.value = _ui.value.copy(playing = trip.title)
-        val events = DemoPlayer.events(trip)
-        for ((t, e) in events) {
-            val r = Runnable { dispatch(e) }
-            demoRunnables += r
-            main.postDelayed(r, t)
+        _ui.value = _ui.value.copy(playing = label)
+        var offset = 0L
+        for (trip in trips) {
+            val events = DemoPlayer.events(trip)
+            for ((t, e) in events) {
+                val r = Runnable { dispatch(e) }
+                demoRunnables += r
+                main.postDelayed(r, offset + t)
+            }
+            // wait for arrival to close the page and the summary to be read before the next trip
+            offset += (events.lastOrNull()?.first ?: 0L) + 12_000
         }
         val done = Runnable { _ui.value = _ui.value.copy(playing = null) }
         demoRunnables += done
-        main.postDelayed(done, (events.lastOrNull()?.first ?: 0L) + 500)
+        main.postDelayed(done, offset)
     }
 
     fun stopDemo() {
