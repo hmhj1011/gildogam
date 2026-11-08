@@ -293,4 +293,14 @@ class GildogamEngineTest {
         assertEquals(listOf("bridge-seohae", "rest-haengdamdo"), Catalog.onTheWayTo("당진 시청").map { it.id })
         assertTrue(Catalog.onTheWayTo("대전역").isEmpty())
     }
+
+    @Test
+    fun the_same_trip_again_is_previewed_again_after_arriving() {
+        val d = drive(kst(8, 10))
+        d.play(DemoTrips.airport)
+        assertNull(d.engine.state.preview)
+        d.said.clear()
+        d.play(DemoTrips.airport)
+        assertTrue(d.said.first(), d.said.first().startsWith("이번 여정에서 만날 수 있는 카드 1장. 새로운 에디션을 노려 볼까요?"))
+    }
 }

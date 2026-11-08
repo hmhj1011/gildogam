@@ -134,8 +134,9 @@ private fun ColumnScope.RoadNow(ui: UiState) {
         }
         car.journey == null && preview != null && preview.cards.isNotEmpty() -> {
             Text("이번 여정에서 만날 카드", color = Road.CenterLine, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+            val newCards = preview.cards.count { !car.dex.has(it.id) }
             Text(
-                "${preview.cards.size}장 · 새 카드 ${preview.newCards}장",
+                if (newCards > 0) "${preview.cards.size}장 · 새 카드 ${newCards}장" else "${preview.cards.size}장 · 새 에디션 도전",
                 color = Road.Paint,
                 fontSize = 44.sp,
                 fontWeight = FontWeight.Bold,
@@ -205,7 +206,9 @@ private fun ColumnScope.RoadNow(ui: UiState) {
 private fun Page(ui: UiState, onRiders: () -> Unit, onOpenDex: () -> Unit, onEndJourney: () -> Unit) {
     val car = ui.car
     val journey = car.journey
-    val today = journey?.let { j -> car.dex.acquisitions.filter { it.journeyId == j.id } }.orEmpty()
+    // While parked after a trip, keep showing the page just finished.
+    val shown = journey ?: if (car.parked) car.dex.journeys.maxByOrNull { it.endedAtMs ?: it.startedAtMs } else null
+    val today = shown?.let { j -> car.dex.acquisitions.filter { it.journeyId == j.id } }.orEmpty()
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Column(
             Modifier
@@ -213,14 +216,20 @@ private fun Page(ui: UiState, onRiders: () -> Unit, onOpenDex: () -> Unit, onEnd
                 .background(Road.Shoulder, RoundedCornerShape(20.dp))
                 .padding(20.dp),
         ) {
-            Text("오늘의 페이지", color = Road.Faded, fontSize = 18.sp)
             Text(
-                if (journey == null) "아직 시작 전" else "카드 ${today.size}장",
+                if (journey == null && shown != null) "방금 마친 여정 · ${shown.title}" else "오늘의 페이지",
+                color = Road.Faded,
+                fontSize = 18.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                if (shown == null) "아직 시작 전" else "카드 ${today.size}장",
                 color = Road.Paint,
                 fontSize = 30.sp,
                 fontWeight = FontWeight.Bold,
             )
-            val riders = journey?.riders?.takeIf { it.isNotEmpty() }
+            val riders = shown?.riders?.takeIf { it.isNotEmpty() }
             if (riders != null) Text("함께 탄 사람: ${Korean.joinListeners(riders)}", color = Road.Paint, fontSize = 18.sp)
             if (today.isNotEmpty()) {
                 Spacer(Modifier.height(10.dp))

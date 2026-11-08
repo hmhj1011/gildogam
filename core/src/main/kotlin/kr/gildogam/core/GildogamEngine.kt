@@ -155,7 +155,8 @@ class GildogamEngine(
             startLat = j.startLat ?: lastLat,
             startLng = j.startLng ?: lastLng,
         )
-        state = state.copy(journey = null)
+        state = state.copy(journey = null, preview = null)
+        previewedFor = null
         parkedSince = null
         armed.clear()
 

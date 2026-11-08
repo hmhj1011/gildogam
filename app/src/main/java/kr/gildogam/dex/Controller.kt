@@ -30,6 +30,7 @@ import kr.gildogam.voice.PleosListener
 import kr.gildogam.voice.PleosSpeaker
 import kr.gildogam.voice.Speaker
 import java.util.Calendar
+import java.util.TimeZone
 
 /** Which SDK feeds what: shown at the bottom of the screen so the live SDK status is visible. */
 data class Sources(
@@ -50,6 +51,7 @@ sealed interface Ask {
 /** Demo clock: shift the time of day so night and dawn editions can be shown at any hour. */
 enum class DemoClock(val label: String, val hour: Int?) {
     NOW("지금", null),
+    NOON("낮 12시", 12),
     NIGHT("밤 10시", 22),
     DAWN("새벽 6시", 6),
 }
@@ -296,7 +298,8 @@ class Controller(context: Context) {
     fun setClock(c: DemoClock) {
         clock = c
         clockOffsetMs = c.hour?.let { hour ->
-            val cal = Calendar.getInstance().apply {
+            // Korea time: the demo roads are in Korea, whatever zone the device is set to.
+            val cal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Seoul")).apply {
                 set(Calendar.HOUR_OF_DAY, hour)
                 set(Calendar.MINUTE, 0)
                 set(Calendar.SECOND, 0)

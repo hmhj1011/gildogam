@@ -36,6 +36,8 @@ LOGCAT_PID=$!
 adb shell wm size 1920x1080
 adb shell wm density 200
 adb shell settings put system accelerometer_rotation 0
+adb shell service call alarm 3 s16 Asia/Seoul >/dev/null 2>&1 || true
+adb shell setprop persist.sys.timezone Asia/Seoul
 
 adb install -r -g "$APK"
 adb shell am start -n "$PKG/.MainActivity"
@@ -46,7 +48,9 @@ tap "시연 콘솔"
 sleep 2
 shot 02-console
 
-# Trip 1: a clear day. Record it (screenrecord stops by itself at 170 s).
+# Trip 1: a clear day at noon. Record it (screenrecord stops by itself at 170 s).
+tap "낮 12시"
+sleep 1
 adb shell screenrecord --time-limit 170 --bit-rate 2000000 /sdcard/trip1.mp4 &
 REC_PID=$!
 tap "서울 → 강릉 경포해변"
