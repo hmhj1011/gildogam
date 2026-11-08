@@ -1,0 +1,120 @@
+name: Release
+
+# Push a tag that matches version.properties (e.g. v0.1.0) to:
+#  1. build the release APK named by the contest rule (apk/<TEAM_NAME>_<APP_FILE_NAME>_release.apk),
+#  2. publish it on the GitHub Releases page,
+#  3. commit it into the apk/ folder on main (the contest asks for the APK in the repository).
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Install SDK packages
+        run: sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Check tag matches version.properties
+        id: version
+        run: |
+          set -euo pipefail
+          v="$(awk -F= '/^VERSION_MAJOR=/{a=$2} /^VERSION_MINOR=/{b=$2} /^VERSION_PATCH=/{c=$2} END{gsub(/[[:space:]]/,"",a);gsub(/[[:space:]]/,"",b);gsub(/[[:space:]]/,"",c);printf "%s.%s.%s",a,b,c}' version.properties)"
+          if [ "${GITHUB_REF_NAME}" != "v${v}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match version.properties v${v}"
+            exit 1
+          fi
+          echo "version=${v}" >> "$GITHUB_OUTPUT"
+
+      - name: Release notes from CHANGELOG.md
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, re
+          v = os.environ["VERSION"]
+          text = pathlib.Path("CHANGELOG.md").read_text(encoding="utf-8")
+          m = re.search(rf"## \[{re.escape(v)}\].*?(?=\n## |\Z)", text, re.S)
+          pathlib.Path("release_notes.md").write_text((m.group(0).strip() if m else f"길도감 {v}") + "\n", encoding="utf-8")
+          PY
+
+      - name: Unit tests
+        run: ./gradlew :core:test --stacktrace
+
+      - name: Build release APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -n "${KEYSTORE_BASE64}" ] && [ -n "${KEYSTORE_PASSWORD}" ] && [ -n "${KEY_ALIAS}" ] && [ -n "${KEY_PASSWORD}" ]; then
+            echo "${KEYSTORE_BASE64}" | base64 -d > "${RUNNER_TEMP}/release.jks"
+            export KEYSTORE_PATH="${RUNNER_TEMP}/release.jks"
+            echo "Signing with the release keystore from repository secrets."
+          else
+            unset KEYSTORE_PATH || true
+            echo "No signing secrets: the APK is signed with the debug key so it still installs."
+          fi
+          ./gradlew :app:packageSubmissionApk --stacktrace
+          ls -la apk
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          apk="$(ls apk/*_release.apk | head -n 1)"
+          test -f "$apk"
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" "$apk" --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" "$apk" \
+              --title "길도감 ${VERSION}" \
+              --notes-file release_notes.md
+          fi
+
+      - name: Commit the APK into apk/ on main
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          apk="$(ls apk/*_release.apk | head -n 1)"
+          cp "$apk" "${RUNNER_TEMP}/"
+          name="$(basename "$apk")"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git checkout -B main origin/main
+          mkdir -p apk
+          cp "${RUNNER_TEMP}/${name}" "apk/${name}"
+          git add "apk/${name}"
+          if git diff --cached --quiet; then
+            echo "APK unchanged"
+          else
+            git commit -m "Add release APK ${VERSION} [skip ci]"
+            git push origin main
+          fi
