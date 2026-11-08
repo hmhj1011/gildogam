@@ -114,12 +114,8 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 
 1. `gradle.properties`의 `TEAM_NAME`을 팀명으로 바꿉니다 (현재 `TEAM_NAME=ITj`). 파일 이름은 `apk/ITj_Gildogam_release.apk`가 됩니다. GitHub에서 파일 이름이 깨지지 않도록 영문을 권장합니다.
 2. `version.properties`의 버전과 `CHANGELOG.md`를 함께 올립니다.
-3. 같은 버전으로 태그를 푸시합니다.
-   ```bash
-   git tag v0.1.0
-   git push origin v0.1.0
-   ```
-4. Actions의 **Release** 워크플로가 테스트 → 릴리스 APK 빌드 → Releases 게시 → `apk/` 폴더에 APK 커밋까지 합니다.
+3. GitHub 저장소의 **Actions → Release → Run workflow**(main 브랜치)를 누릅니다. 같은 버전의 태그(`git tag v0.1.0 && git push origin v0.1.0`)를 푸시해도 됩니다.
+4. **Release** 워크플로가 테스트 → 릴리스 APK 빌드 → `v<버전>` 태그와 Releases 게시 → `apk/` 폴더에 APK 커밋까지 합니다.
 
 서명 키(선택): 저장소 Settings → Secrets에 `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`를 넣으면 그 키로 서명합니다. 없으면 디버그 키로 서명해 그대로 설치할 수 있습니다.
 

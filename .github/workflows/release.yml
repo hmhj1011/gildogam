@@ -1,6 +1,7 @@
 name: Release
 
-# Push a tag that matches version.properties (e.g. v0.1.0) to:
+# Run it from the Actions tab ("Run workflow" on main), or push a tag that matches
+# version.properties (e.g. v0.1.0). It will:
 #  1. build the release APK named by the contest rule (apk/<TEAM_NAME>_<APP_FILE_NAME>_release.apk),
 #  2. publish it on the GitHub Releases page,
 #  3. commit it into the apk/ folder on main (the contest asks for the APK in the repository).
@@ -8,6 +9,7 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -36,16 +38,17 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Check tag matches version.properties
+      - name: Version and tag from version.properties
         id: version
         run: |
           set -euo pipefail
           v="$(awk -F= '/^VERSION_MAJOR=/{a=$2} /^VERSION_MINOR=/{b=$2} /^VERSION_PATCH=/{c=$2} END{gsub(/[[:space:]]/,"",a);gsub(/[[:space:]]/,"",b);gsub(/[[:space:]]/,"",c);printf "%s.%s.%s",a,b,c}' version.properties)"
-          if [ "${GITHUB_REF_NAME}" != "v${v}" ]; then
+          if [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${GITHUB_REF_NAME}" != "v${v}" ]; then
             echo "::error::Tag ${GITHUB_REF_NAME} does not match version.properties v${v}"
             exit 1
           fi
           echo "version=${v}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${v}" >> "$GITHUB_OUTPUT"
 
       - name: Release notes from CHANGELOG.md
         env:
@@ -85,14 +88,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
           set -euo pipefail
           apk="$(ls apk/*_release.apk | head -n 1)"
           test -f "$apk"
-          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
-            gh release upload "${GITHUB_REF_NAME}" "$apk" --clobber
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release upload "${TAG}" "$apk" --clobber
           else
-            gh release create "${GITHUB_REF_NAME}" "$apk" \
+            # Creates the tag on this commit when it does not exist yet (manual run).
+            gh release create "${TAG}" "$apk" \
+              --target "${GITHUB_SHA}" \
               --title "길도감 ${VERSION}" \
               --notes-file release_notes.md
           fi
