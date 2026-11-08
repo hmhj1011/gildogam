@@ -24,7 +24,8 @@ class PleosNavi(
     private val emit: (CarEvent) -> Unit,
 ) {
     private val main = Handler(Looper.getMainLooper())
-    private val navi = NaviHelper(context.applicationContext)
+    private val app = context.applicationContext
+    private var navi: NaviHelper? = null
     private var connected = false
     private var quiet = false
     private var lastDestination: String? = null
@@ -37,8 +38,8 @@ class PleosNavi(
         override fun run() {
             if (!connected) return
             try {
-                navi.getTBTInfo()
-                navi.getDestinationInfo()
+                navi?.getTBTInfo()
+                navi?.getDestinationInfo()
             } catch (e: SecurityException) {
                 status = "내비 권한 없음"
             } catch (t: Throwable) {
@@ -93,11 +94,13 @@ class PleosNavi(
 
     fun start() {
         try {
-            navi.initialize(
+            val n = NaviHelper(app)
+            navi = n
+            n.initialize(
                 onConnected = {
                     main.post {
                         connected = true
-                        navi.addListener(listener)
+                        n.addListener(listener)
                         status = "내비 연결됨"
                         main.post(poller)
                     }
@@ -138,8 +141,8 @@ class PleosNavi(
     fun stop() {
         main.removeCallbacks(poller)
         runCatching {
-            if (connected) navi.removeListener(listener)
-            navi.release()
+            if (connected) navi?.removeListener(listener)
+            navi?.release()
         }
         connected = false
     }

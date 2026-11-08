@@ -131,36 +131,52 @@ class Controller(context: Context) {
     }
 
     private fun initSpeaker() {
-        val pleos = PleosSpeaker(app)
+        val pleos = runCatching { PleosSpeaker(app) }.getOrNull()
+        if (pleos == null) {
+            initAndroidSpeaker()
+            return
+        }
         pleos.init { ok ->
             if (ok) {
                 speaker = pleos
                 updateSources { it.copy(tts = pleos.label) }
             } else {
                 pleos.release()
-                val fallback = AndroidSpeaker(app)
-                fallback.init { ok2 ->
-                    speaker = if (ok2) fallback else null
-                    updateSources { it.copy(tts = if (ok2) fallback.label + " (대체)" else "음성 없음, 자막만") }
-                }
+                initAndroidSpeaker()
             }
         }
     }
 
+    private fun initAndroidSpeaker() {
+        val fallback = AndroidSpeaker(app)
+        fallback.init { ok2 ->
+            speaker = if (ok2) fallback else null
+            updateSources { it.copy(tts = if (ok2) fallback.label + " (대체)" else "음성 없음, 자막만") }
+        }
+    }
+
     private fun initListener() {
-        val pleos = PleosListener(app)
+        val pleos = runCatching { PleosListener(app) }.getOrNull()
+        if (pleos == null) {
+            initAndroidListener()
+            return
+        }
         pleos.init { ok ->
             if (ok) {
                 listener = pleos
                 updateSources { it.copy(stt = pleos.label) }
             } else {
                 pleos.release()
-                val fallback = AndroidListener(app)
-                fallback.init { ok2 ->
-                    listener = if (ok2) fallback else null
-                    updateSources { it.copy(stt = if (ok2) fallback.label + " (대체)" else "음성 인식 없음, 입력창 사용") }
-                }
+                initAndroidListener()
             }
+        }
+    }
+
+    private fun initAndroidListener() {
+        val fallback = AndroidListener(app)
+        fallback.init { ok2 ->
+            listener = if (ok2) fallback else null
+            updateSources { it.copy(stt = if (ok2) fallback.label + " (대체)" else "음성 인식 없음, 입력창 사용") }
         }
     }
 

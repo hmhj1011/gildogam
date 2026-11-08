@@ -18,7 +18,8 @@ class PleosLocation(
     private val emit: (CarEvent) -> Unit,
 ) {
     private val main = Handler(Looper.getMainLooper())
-    private val fused = FusedLocation(context.applicationContext)
+    private val app = context.applicationContext
+    private var fused: FusedLocation? = null
     private var running = false
 
     var status: String = "미연결"
@@ -41,12 +42,14 @@ class PleosLocation(
     fun start() {
         if (running) return
         try {
-            if (!fused.isSupported()) {
+            val f = FusedLocation(app)
+            if (!f.isSupported()) {
                 status = "FusedLocation 미지원"
                 return
             }
-            fused.initialize()
-            fused.registerFusedLocationCallback(listener)
+            f.initialize()
+            f.registerFusedLocationCallback(listener)
+            fused = f
             running = true
             status = "위치 대기"
         } catch (t: Throwable) {
@@ -58,8 +61,8 @@ class PleosLocation(
     fun stop() {
         if (!running) return
         runCatching {
-            fused.unregisterFusedLocationCallback(listener)
-            fused.release()
+            fused?.unregisterFusedLocationCallback(listener)
+            fused?.release()
         }
         running = false
     }
