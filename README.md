@@ -112,7 +112,7 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 
 ## 릴리스와 APK 제출
 
-1. `gradle.properties`의 `TEAM_NAME`을 팀명으로 바꿉니다 (예: `TEAM_NAME=TeamRoad`). 파일 이름은 `apk/TeamRoad_Gildogam_release.apk`가 됩니다. GitHub에서 파일 이름이 깨지지 않도록 영문을 권장합니다.
+1. `gradle.properties`의 `TEAM_NAME`을 팀명으로 바꿉니다 (현재 `TEAM_NAME=ITj`). 파일 이름은 `apk/ITj_Gildogam_release.apk`가 됩니다. GitHub에서 파일 이름이 깨지지 않도록 영문을 권장합니다.
 2. `version.properties`의 버전과 `CHANGELOG.md`를 함께 올립니다.
 3. 같은 버전으로 태그를 푸시합니다.
    ```bash
