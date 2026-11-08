@@ -47,7 +47,7 @@ sleep 2
 shot 02-console
 
 # Trip 1: a clear day. Record it (screenrecord stops by itself at 170 s).
-adb shell screenrecord --time-limit 170 --bit-rate 4000000 /sdcard/trip1.mp4 &
+adb shell screenrecord --time-limit 170 --bit-rate 2000000 /sdcard/trip1.mp4 &
 REC_PID=$!
 tap "서울 → 강릉 경포해변"
 for i in $(seq -w 1 14); do

@@ -7,6 +7,7 @@ import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kr.gildogam.car.CarApi
 import kr.gildogam.car.CarPropertySignals
 import kr.gildogam.car.PleosLocation
 import kr.gildogam.car.PleosNavi
@@ -89,7 +90,9 @@ class Controller(context: Context) {
     private var listenToken = 0
     private var sources = Sources()
 
-    private val carProps = CarPropertySignals(app, ::dispatch)
+    // Created only where android.car exists: on other devices loading it would crash the app.
+    private val carProps: CarPropertySignals? =
+        if (CarApi.available(app)) runCatching { CarPropertySignals(app, ::dispatch) }.getOrNull() else null
     private val wiper = PleosWiper(app) { on -> dispatch(CarEvent.Wiper(on)) }
     private val navi = PleosNavi(app, ::dispatch)
     private val location = PleosLocation(app, ::dispatch)
@@ -115,7 +118,7 @@ class Controller(context: Context) {
         started = true
         initSpeaker()
         initListener()
-        carProps.start()
+        carProps?.start()
         wiper.start()
         navi.start()
         location.start()
@@ -125,7 +128,7 @@ class Controller(context: Context) {
 
     fun onPermissionsChanged() {
         if (!started) return
-        carProps.restart()
+        carProps?.restart()
         location.stop()
         location.start()
     }
@@ -186,7 +189,7 @@ class Controller(context: Context) {
     }
 
     private fun refreshSources() {
-        val next = sources.copy(vehicle = carProps.status, wiper = wiper.status(), navi = navi.status, location = location.status)
+        val next = sources.copy(vehicle = carProps?.status ?: "차량 API 없음", wiper = wiper.status(), navi = navi.status, location = location.status)
         if (next != sources) updateSources { next }
     }
 
@@ -349,7 +352,7 @@ class Controller(context: Context) {
         main.removeCallbacks(ticker)
         speaker?.release()
         listener?.release()
-        carProps.stop()
+        carProps?.stop()
         wiper.stop()
         navi.stop()
         location.stop()
