@@ -76,7 +76,12 @@ fun DriveScreen(
             CenterLine()
             Spacer(Modifier.weight(1f))
 
-            Headline(ui, shownTitle = if (journey == null) shown?.title else null, earnedCount = earned.size)
+            Headline(
+                ui,
+                shownTitle = if (journey == null) shown?.title else null,
+                earnedCount = earned.size,
+                nextStop = stops.firstOrNull { it.got == null && it.name != car.inSegment }?.name,
+            )
 
             if (stops.isNotEmpty()) {
                 Spacer(Modifier.height(28.dp))
@@ -163,19 +168,20 @@ private fun TopBar(ui: UiState, cards: Int, showCount: Boolean) {
 
 /** The one thing to read: where on the road we are. */
 @Composable
-private fun Headline(ui: UiState, shownTitle: String?, earnedCount: Int) {
+private fun Headline(ui: UiState, shownTitle: String?, earnedCount: Int, nextStop: String?) {
     val car = ui.car
     val preview = car.preview
     val (label, big) = when {
         car.inSegment != null -> "지나는 중" to car.inSegment!!
         car.upcoming != null && car.driving -> "곧 만날 길" to car.upcoming!!
-        car.journey != null -> "여정 기록 중" to "다음 길을 기다리는 중"
+        car.journey != null && nextStop != null -> "다음 길" to nextStop
+        car.journey != null -> "여정 기록 중" to "달린 길이 오늘의 페이지에 남고 있어요"
         preview != null && preview.cards.isNotEmpty() -> {
             val newCards = preview.cards.count { !car.dex.has(it.id) }
             "이번 여정에서 만날 카드" to (if (newCards > 0) "${preview.cards.size}장, 새 카드 ${newCards}장" else "${preview.cards.size}장, 새 에디션 도전")
         }
         shownTitle != null -> "방금 마친 여정 · $shownTitle" to "카드 ${earnedCount}장"
-        else -> "길도감" to "출발하면 여정이 시작돼요"
+        else -> "여정 대기" to "출발하면 여정이 시작돼요"
     }
     Text(label, color = Road.CenterLine, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
     Spacer(Modifier.height(6.dp))
